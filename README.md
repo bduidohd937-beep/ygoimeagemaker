@@ -28,6 +28,11 @@ TXT/CSV 예시:
 
 세 번째 열은 선택적 스타일(`ocean`, `cosmos`, `ember`, `machine`, `relic`, `bloom`, `divine`, `shadow`)입니다. CDB의 속성을 기준으로 자동 테마를 고릅니다.
 
+
+## GitHub Pages 최초 설정
+
+이 저장소는 정적 사이트 배포 워크플로(`.github/workflows/pages.yml`)를 포함합니다. **새 저장소에서는 처음 한 번** GitHub `Settings → Pages → Build and deployment → Source`를 `GitHub Actions`로 선택해야 합니다. 설정 전에는 `configure-pages` 단계가 `Get Pages site failed` 오류로 실패할 수 있습니다. 설정 후 `Actions → GitHub Pages 배포 → Re-run jobs`를 실행하세요.
+
 ## 기술 및 개인정보
 
 정적 HTML/CSS/Canvas JavaScript이며 그림 생성과 ZIP 제작은 모두 클라이언트에서 이루어집니다. 파일을 서버로 전송하지 않습니다. **CDB 읽기 기능만** 외부 CDN의 [`sql.js`](https://github.com/sql-js/sql.js) WASM 라이브러리를 최초 1회 로딩하므로 인터넷 연결이 필요합니다. 라이브러리 로드 실패 시에도 TXT/CSV/수동 입력은 작동합니다.
