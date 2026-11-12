@@ -18,7 +18,7 @@
         <span class="brand-mark" aria-hidden="true"><span class="mark-star">✦</span></span>
         <span><strong>YGO <em>ART</em> LAB</strong><small>커스텀 카드 테스트 도구</small></span>
       </a>
-      <div class="top-actions"><span class="privacy"><span class="privacy-dot"></span>브라우저 내부에서 이미지 생성</span><span class="version">V1.0</span></div>
+      <div class="top-actions"><span class="privacy"><span class="privacy-dot"></span>브라우저 내부에서 이미지 생성</span><span class="version">V1.1</span></div>
     </header>
 
     <main id="main">
@@ -48,6 +48,7 @@
 
           <div class="section-heading settings-heading"><span class="section-number">02</span><div><h2>일러스트 설정</h2><p>전체 카드에 공통으로 적용</p></div></div>
           <div class="field-group"><label for="style-select">스타일</label><select id="style-select"><option value="auto">자동 — 카드별 추천</option><option value="ocean">심해 · 바다</option><option value="cosmos">우주 · 성운</option><option value="ember">화염 · 용암</option><option value="machine">기계 · 전자</option><option value="relic">고대 · 유적</option><option value="bloom">꽃 · 자연</option><option value="divine">빛 · 성역</option><option value="shadow">어둠 · 그림자</option></select></div>
+          <div class="field-group"><label for="subject-select">일러스트 주제</label><select id="subject-select"><option value="auto">자동 — 테마·종족 기반</option><option value="warrior">전사 · 기사</option><option value="dragon">드래곤</option><option value="mech">기계 · 로봇</option><option value="wings">날개 · 천사</option><option value="spirit">망령 · 정령</option><option value="crystal">보석 · 결정</option><option value="none">기존 추상 문양만</option></select></div>
           <div class="field-group"><label for="tone-select">색상 분위기</label><select id="tone-select"><option value="original">테마 고유 색상</option><option value="blue">사파이어 블루</option><option value="violet">아메시스트 퍼플</option><option value="red">크림슨 레드</option><option value="gold">앰버 골드</option><option value="green">에메랄드 그린</option></select></div>
           <div class="field-row"><div class="field-group"><label for="size-select">해상도</label><select id="size-select"><option value="512">512 × 512</option><option value="768" selected>768 × 768</option><option value="1024">1024 × 1024</option></select></div><div class="field-group"><label for="format-select">파일 형식</label><select id="format-select"><option value="jpg">JPG</option><option value="png">PNG</option></select></div></div>
           <label class="toggle-line"><span><strong>카드명 · ID 표시</strong><small>이미지 안에 텍스트 삽입</small></span><span class="switch"><input id="label-toggle" type="checkbox" /><span class="switch-track"></span></span></label>
@@ -56,17 +57,19 @@
 
         <section class="panel preview" aria-label="이미지 미리보기">
           <div class="preview-header"><div><div class="overline">LIVE PREVIEW</div><h2 id="preview-title">샘플 — 심해</h2><p class="preview-meta" id="preview-meta">100000001 · 심해 · 바다</p></div><span class="live-dot" title="설정 변경 시 자동 갱신"></span></div>
+          <div class="card-tuning"><label for="card-style">현재 카드 스타일</label><select id="card-style" aria-label="현재 카드 전용 스타일"><option value="auto">자동 / 전체 설정 따름</option><option value="ocean">심해 · 바다</option><option value="cosmos">우주 · 성운</option><option value="ember">화염 · 용암</option><option value="machine">기계 · 전자</option><option value="relic">고대 · 유적</option><option value="bloom">꽃 · 자연</option><option value="divine">빛 · 성역</option><option value="shadow">어둠 · 그림자</option></select><button type="button" class="button button-outline" id="reroll-card">↻ 이 카드만 변경</button></div>
           <div class="art-stage"><div class="stage-glow" aria-hidden="true"></div><div class="canvas-wrap"><canvas id="art-canvas" width="640" height="640" aria-label="선택 카드의 생성된 임시 일러스트"></canvas></div><div class="stage-bottom"><span>ARTWORK ONLY</span><span id="stage-resolution">768 × 768</span></div></div>
-          <div class="preview-actions"><button class="button button-primary" id="download-current" type="button"><span aria-hidden="true">↓</span> 현재 이미지 저장</button><button class="button button-outline" id="download-zip" type="button"><span aria-hidden="true">▤</span> 전체 ZIP 다운로드</button></div>
+          <div class="preview-actions"><button class="button button-primary" id="download-current" type="button"><span aria-hidden="true">↓</span> 현재 이미지 저장</button><button class="button button-outline" id="download-zip" type="button"><span aria-hidden="true">▤</span> 선택 카드 ZIP 저장</button></div>
           <div class="tip"><span>✦</span> 임시 이미지이므로 캐릭터를 직접 그리지 않고, 스타일별 문양·빛·형태를 조합해 빠르게 생성해.</div>
           <div class="progress" id="progress" hidden><div class="progress-head"><span id="progress-label">이미지 생성 중</span><button type="button" class="cancel" id="cancel-export">취소</button></div><div class="progress-track"><div id="progress-fill"></div></div></div>
         </section>
 
         <aside class="panel library" aria-label="카드 목록">
           <div class="library-head"><div class="section-heading"><span class="section-number">03</span><div><h2>이미지 목록</h2><p id="card-count">3장 · 예시 데이터</p></div></div><button class="button button-ghost mini" id="clear-cards" type="button" title="목록 비우기">초기화</button></div>
-          <div class="library-toolbar"><span>생성 대상</span><span>카드를 선택해 미리보기</span></div>
-          <div class="card-list" id="card-list" role="listbox" aria-label="생성 대상 카드 목록"></div>
-          <div class="library-footer"><span class="library-note">이미지는 <code>카드ID.jpg</code> 형식으로 저장돼.</span><div class="library-summary"><span>총 생성 대상</span><strong id="total-count">3 <small>장</small></strong></div></div>
+          <div class="library-toolbar"><label for="card-search">카드명 · ID 검색</label><input id="card-search" type="search" placeholder="목록 검색" autocomplete="off" /></div>
+          <div class="select-tools"><button type="button" id="select-all" class="button button-ghost">검색 결과 모두 선택</button><button type="button" id="select-none" class="button button-ghost">선택 해제</button></div>
+          <div class="card-list" id="card-list" role="list" aria-label="생성 대상 카드 목록"></div>
+          <div class="library-footer"><button class="button button-outline full" id="delete-selected" type="button">선택 카드 목록에서 삭제</button><span class="library-note">파일명 <code>카드ID.jpg</code> · 목록과 생성 설정은 이 브라우저에 저장됨</span><div class="library-summary"><span id="selection-summary">선택 3 / 전체 3장</span><strong id="total-count">3 <small>장</small></strong></div></div>
         </aside>
       </section>
       <footer class="footer"><span>YGO ART LAB · 테스트용 임시 일러스트 생성기</span><span>CDB를 서버에 업로드하지 않습니다 · 카드 프레임 생성 기능 없음</span></footer>
