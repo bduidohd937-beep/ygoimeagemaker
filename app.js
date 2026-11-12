@@ -3,16 +3,30 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const THEMES = {
-    ocean: { name: '심해 · 바다', dark: '#06162b', mid: '#0e4761', edge: '#08b5ba', shine: '#85f0e4', glyph: '◈' },
-    cosmos: { name: '우주 · 성운', dark: '#11112c', mid: '#483280', edge: '#bd65e8', shine: '#eab9ff', glyph: '✦' },
-    ember: { name: '화염 · 용암', dark: '#220b15', mid: '#8c2926', edge: '#ff7a36', shine: '#ffe0a0', glyph: '✧' },
-    machine: { name: '기계 · 전자', dark: '#0d1926', mid: '#22475c', edge: '#42d9e4', shine: '#b8fdff', glyph: '⬡' },
-    relic: { name: '고대 · 유적', dark: '#19182b', mid: '#5c425a', edge: '#d5a873', shine: '#f7dfb0', glyph: '◆' },
-    bloom: { name: '꽃 · 자연', dark: '#0e2220', mid: '#315753', edge: '#87d5ab', shine: '#f4eec7', glyph: '❀' },
-    divine: { name: '빛 · 성역', dark: '#1b2542', mid: '#596c9a', edge: '#d5c28e', shine: '#fff8de', glyph: '✺' },
-    shadow: { name: '어둠 · 그림자', dark: '#100e1f', mid: '#392a57', edge: '#9476e5', shine: '#cbbdfd', glyph: '◇' }
+    ocean:   { name: '심해 · 바다',   dark: '#06162b', mid: '#0e4761', edge: '#08b5ba', shine: '#85f0e4', glyph: '◈' },
+    cosmos:  { name: '우주 · 성운',   dark: '#11112c', mid: '#483280', edge: '#bd65e8', shine: '#eab9ff', glyph: '✦' },
+    ember:   { name: '화염 · 용암',   dark: '#220b15', mid: '#8c2926', edge: '#ff7a36', shine: '#ffe0a0', glyph: '✧' },
+    machine: { name: '기계 · 전자',   dark: '#0d1926', mid: '#22475c', edge: '#42d9e4', shine: '#b8fdff', glyph: '⬡' },
+    relic:   { name: '고대 · 유적',   dark: '#19182b', mid: '#5c425a', edge: '#d5a873', shine: '#f7dfb0', glyph: '◆' },
+    bloom:   { name: '꽃 · 자연',     dark: '#0e2220', mid: '#315753', edge: '#87d5ab', shine: '#f4eec7', glyph: '❀' },
+    divine:  { name: '빛 · 성역',     dark: '#1b2542', mid: '#596c9a', edge: '#d5c28e', shine: '#fff8de', glyph: '✺' },
+    shadow:  { name: '어둠 · 그림자', dark: '#100e1f', mid: '#392a57', edge: '#9476e5', shine: '#cbbdfd', glyph: '◇' },
+    storm:   { name: '번개 · 폭풍',   dark: '#101a33', mid: '#20457d', edge: '#6fd2ff', shine: '#f4fbff', glyph: '⚡' },
+    frost:   { name: '얼음 · 설원',   dark: '#102231', mid: '#426d8a', edge: '#9fe8ff', shine: '#f2fcff', glyph: '✶' },
+    desert:  { name: '사막 · 황야',   dark: '#2b190c', mid: '#8a5a24', edge: '#f2bc65', shine: '#fff1c4', glyph: '◬' },
+    venom:   { name: '독 · 저주',     dark: '#130f1f', mid: '#43305e', edge: '#77db6b', shine: '#d7ffc8', glyph: '☣' }
   };
   const STYLES = Object.keys(THEMES);
+  const SUBJECTS = ['auto','warrior','dragon','mech','wings','spirit','crystal','beast','blade','eye','tentacle','none'];
+  // 프리셋은 카드 데이터만 수정하며, 전역 설정이나 기존 CDB/Lua 파일은 건드리지 않는다.
+  const PRESETS = {
+    bathys: { name:'무성해 · 바티스',style:'ocean',subject:'auto',tone:'blue' },
+    cosmocode: { name:'코스모코드',style:'cosmos',subject:'auto',tone:'violet' },
+    varnek: { name:'바르네크',style:'shadow',subject:'spirit',tone:'violet' },
+    achillish: { name:'아칠리쉬',style:'ember',subject:'warrior',tone:'red' },
+    watchrealm: { name:'천망성역',style:'divine',subject:'eye',tone:'gold' },
+    abyssgrave: { name:'심연묘역',style:'shadow',subject:'spirit',tone:'green' }
+  };
   const TONES = { blue:'#40a9fa',violet:'#b479ff',red:'#ff656c',gold:'#ebbf66',green:'#66d8a9' };
   const MAX_CARDS = 400;
   const MAX_FILE_BYTES = 30 * 1024 * 1024;
@@ -21,7 +35,7 @@
     {id:'100000002',name:'샘플 — 성운',style:'cosmos',attribute:16},
     {id:'100000003',name:'샘플 — 화염',style:'ember',attribute:4}
   ];
-  const state = { cards:sampleCards.map(v=>({...v})),selected:'100000001',checked:new Set(sampleCards.map(c=>c.id)),demo:true,seed:0,busy:false,cancel:false };
+  const state = { cards:sampleCards.map(v=>({...v})),selected:'100000001',checked:new Set(sampleCards.map(c=>c.id)),demo:true,seed:0,busy:false,cancel:false,lastBatch:null };
   const STORAGE_KEY='ygo-art-lab-v1.1';
   let toastTimer = null, sqlPromise = null;
   const encoder = new TextEncoder();
@@ -41,20 +55,43 @@
   function mix(a,b,k){const A=rgb(a),B=rgb(b);return '#'+A.map((v,i)=>Math.round(v*(1-k)+B[i]*k).toString(16).padStart(2,'0')).join('');}
   function getCard(){return state.cards.find(c=>c.id===state.selected)||state.cards[0]||null;}
   function attributeTheme(a){if(a&2)return 'ocean';if(a&4)return 'ember';if(a&16)return 'divine';if(a&32)return 'shadow';if(a&8)return 'bloom';if(a&1)return 'relic';if(a&64)return 'cosmos';return null;}
+  function inferThemeFromName(name=''){
+    const t=String(name).toLocaleLowerCase();
+    const has=(...words)=>words.some(w=>t.includes(w));
+    if(has('심해','바다','해룡','해양','ocean','sea','abyss','아비스','mer','marine','물','파도')) return 'ocean';
+    if(has('우주','성운','별','코스모','성계','cosmo','space','nova','star','galaxy','astr')) return 'cosmos';
+    if(has('화염','용암','불','염','인페르노','마그마','flame','fire','lava','burn','pyro')) return 'ember';
+    if(has('기계','메카','코드','전자','사이버','로봇','코어','회로','기갑','machine','mech','cyber','bot','gear','core')) return 'machine';
+    if(has('유적','고대','왕','성배','유물','사원','relic','ruin','ancient','temple','artifact')) return 'relic';
+    if(has('꽃','자연','숲','수목','씨앗','덩굴','bloom','flora','forest','leaf','rose','plant')) return 'bloom';
+    if(has('빛','성역','천','엔젤','angel','holy','sanct','divine','sacred')) return 'divine';
+    if(has('어둠','그림자','흑','암','심연','shadow','dark','night','gloom','void')) return 'shadow';
+    if(has('번개','폭풍','뇌','전격','storm','thunder','volt','lightning','bolt','tempest')) return 'storm';
+    if(has('얼음','빙','설','한기','frost','ice','snow','blizzard','glacier')) return 'frost';
+    if(has('사막','모래','태양','황야','desert','sand','dune','sun','wild')) return 'desert';
+    if(has('독','저주','맹독','사독','venom','poison','curse','toxic','hex','plague')) return 'venom';
+    return null;
+  }
   function resolveTheme(card){const global=$('style-select').value;if(STYLES.includes(card.overrideStyle))return card.overrideStyle;if(global!=='auto')return global;
-    return STYLES.includes(card.style)?card.style:(attributeTheme(Number(card.attribute)||0)||STYLES[Number(card.id.slice(-5))%STYLES.length]);}
-  function palette(card){const theme=resolveTheme(card),base=THEMES[theme],tone=TONES[$('tone-select').value];
+    return STYLES.includes(card.style)?card.style:(inferThemeFromName(card.name)||attributeTheme(Number(card.attribute)||0)||STYLES[Number(card.id.slice(-5))%STYLES.length]);}
+  function resolveTone(card){return card.overrideTone==='original'||TONES[card.overrideTone]?card.overrideTone:$('tone-select').value;}
+  function resolveSubject(card,theme){const value=SUBJECTS.includes(card.overrideSubject)?card.overrideSubject:$('subject-select').value;return value==='auto'?inferSubject(card,theme):value;}
+  function palette(card){const theme=resolveTheme(card),base=THEMES[theme],tone=TONES[resolveTone(card)];
     if(!tone)return {...base,theme};
     return {...base,theme,dark:mix(base.dark,tone,.12),mid:mix(base.mid,tone,.55),edge:mix(base.edge,tone,.69),shine:mix(base.shine,tone,.28)};
   }
   function settings(){return {size:+$('size-select').value,format:$('format-select').value,labels:$('label-toggle').checked,seed:state.seed,subject:$('subject-select').value};}
   function saveState(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify({cards:state.demo?[]:state.cards,demo:state.demo,selected:state.selected,checked:[...state.checked],seed:state.seed,settings:{style:$('style-select').value,tone:$('tone-select').value,subject:$('subject-select').value,size:$('size-select').value,format:$('format-select').value,labels:$('label-toggle').checked}}));}catch(e){/* 사생활 보호 설정 또는 저장 공간 부족: 현재 세션만 유지 */}}
-  function restoreState(){try{const raw=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null');if(!raw||typeof raw!=='object')return;const prefs=raw.settings||{};for(const [key,id,values] of [['style','style-select',['auto',...STYLES]],['tone','tone-select',['original',...Object.keys(TONES)]],['subject','subject-select',['auto','warrior','dragon','mech','wings','spirit','crystal','none']],['size','size-select',['512','768','1024']],['format','format-select',['jpg','png']]]){if(values.includes(prefs[key]))$(id).value=prefs[key];}$('label-toggle').checked=Boolean(prefs.labels);state.seed=Number.isSafeInteger(raw.seed)&&raw.seed>=0?Math.min(raw.seed,1000000):0;$('seed-number').textContent='#'+state.seed;
+  function restoreState(){try{const raw=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null');if(!raw||typeof raw!=='object')return;const prefs=raw.settings||{};for(const [key,id,values] of [['style','style-select',['auto',...STYLES]],['tone','tone-select',['original',...Object.keys(TONES)]],['subject','subject-select',SUBJECTS],['size','size-select',['512','768','1024']],['format','format-select',['jpg','png']]]){if(values.includes(prefs[key]))$(id).value=prefs[key];}$('label-toggle').checked=Boolean(prefs.labels);state.seed=Number.isSafeInteger(raw.seed)&&raw.seed>=0?Math.min(raw.seed,1000000):0;$('seed-number').textContent='#'+state.seed;
     if(Array.isArray(raw.cards)&&!raw.demo){const cards=raw.cards.slice(0,MAX_CARDS).map(normalizeCard).filter(Boolean);const ids=new Set();state.cards=cards.filter(c=>!ids.has(c.id)&&ids.add(c.id));state.demo=false;state.selected=state.cards.some(c=>c.id===raw.selected)?raw.selected:(state.cards[0]?.id||null);const allowed=new Set(state.cards.map(c=>c.id));state.checked=new Set(Array.isArray(raw.checked)?raw.checked.filter(id=>allowed.has(id)):state.cards.map(c=>c.id));}}catch(e){/* 설정 오류나 저장 차단 시 기본값 사용 */}}
   function visibleCards(){const query=$('card-search').value.trim().toLocaleLowerCase();return query?state.cards.filter(c=>c.id.includes(query)||c.name.toLocaleLowerCase().includes(query)):state.cards;}
   function selectedCards(){return state.cards.filter(c=>state.checked.has(c.id));}
-  function updateSelectionUI(){const count=state.checked.size,total=state.cards.length;$('selection-summary').textContent=`선택 ${count} / 전체 ${total}장`;$('total-count').innerHTML=total+' <small>장</small>';$('download-zip').disabled=state.busy||count===0;$('download-zip').textContent=`↓ 선택 카드 ZIP 저장 (${count})`;$('delete-selected').disabled=state.busy||count===0;$('select-all').disabled=state.busy||!visibleCards().length;$('select-none').disabled=state.busy||count===0;const label=document.querySelector('.library-note code');if(label)label.textContent='카드ID.'+$('format-select').value;}
-  function removeCards(ids){if(state.busy)return;const set=new Set(ids),old=state.cards.length;state.cards=state.cards.filter(c=>!set.has(c.id));for(const id of set)state.checked.delete(id);if(!state.cards.some(c=>c.id===state.selected))state.selected=state.cards[0]?.id||null;state.demo=false;saveState();refresh();notify(`${old-state.cards.length}장을 목록에서 삭제했습니다.`,'success');}
+  function updateSelectionUI(){const count=state.checked.size,total=state.cards.length;$('selection-summary').textContent=`선택 ${count} / 전체 ${total}장`;$('total-count').innerHTML=total+' <small>장</small>';$('download-zip').disabled=state.busy||count===0;$('download-zip').textContent=`↓ 선택 카드 ZIP 저장 (${count})`;$('delete-selected').disabled=state.busy||count===0;$('select-all').disabled=state.busy||!visibleCards().length;$('select-none').disabled=state.busy||count===0;
+    for(const id of ['apply-preset','apply-batch'])$(id).disabled=state.busy||count===0;
+    $('undo-batch').disabled=state.busy||!state.lastBatch;
+    $('batch-count').textContent=`선택 ${count}장에만 적용 · 선택되지 않은 카드는 유지`;
+    const label=document.querySelector('.library-note code');if(label)label.textContent='카드ID.'+$('format-select').value;}
+  function removeCards(ids){if(state.busy)return;const set=new Set(ids),old=state.cards.length;state.cards=state.cards.filter(c=>!set.has(c.id));for(const id of set)state.checked.delete(id);if(!state.cards.some(c=>c.id===state.selected))state.selected=state.cards[0]?.id||null;state.demo=false;state.lastBatch=null;saveState();refresh();notify(`${old-state.cards.length}장을 목록에서 삭제했습니다.`,'success');}
   function pathCircle(ctx,x,y,r){ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);}
   function glow(ctx,x,y,r,color,opacity=1){const g=ctx.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,rgba(color,.65*opacity));g.addColorStop(.38,rgba(color,.22*opacity));g.addColorStop(1,rgba(color,0));ctx.fillStyle=g;ctx.fillRect(x-r,y-r,r*2,r*2);}
   function strokeRing(ctx,x,y,r,color,opacity,width=1){ctx.save();ctx.lineWidth=width;ctx.strokeStyle=rgba(color,opacity);pathCircle(ctx,x,y,r);ctx.stroke();ctx.restore();}
@@ -86,13 +123,35 @@
   function divine(ctx,p,r){glow(ctx,512,360,500,p.shine,.95);for(let side of [-1,1]){ctx.save();ctx.translate(512,500);ctx.scale(side,1);for(let i=0;i<12;i++){let y=-190+i*30;ctx.beginPath();ctx.moveTo(40,y);ctx.quadraticCurveTo(160,-270+i*22,420,-310+i*42);ctx.quadraticCurveTo(200,-80+i*23,50,y+40);ctx.closePath();ctx.fillStyle=rgba(i%2?p.shine:p.edge,.10+i*.012);ctx.fill();}ctx.restore();}runeRing(ctx,p,r,512,465,190);for(let i=0;i<16;i++){let a=i*Math.PI/8;line(ctx,[[512+Math.cos(a)*240,465+Math.sin(a)*240],[512+Math.cos(a)*520,465+Math.sin(a)*520]],p.shine,rnd(r,1,5),.23);}prism(ctx,512,500,150,375,p,r);}
   function shadow(ctx,p,r){glow(ctx,520,430,450,p.edge,.7);ctx.fillStyle=rgba(p.shine,.35);pathCircle(ctx,550,365,220);ctx.fill();ctx.fillStyle=rgba(p.dark,1);pathCircle(ctx,630,300,219);ctx.fill();for(let i=0;i<8;i++){let a=i*Math.PI/4;ctx.save();ctx.translate(512,535);ctx.rotate(a);ctx.beginPath();ctx.moveTo(-35,20);ctx.quadraticCurveTo(-180,-120,0,-440);ctx.quadraticCurveTo(70,-145,50,0);ctx.fillStyle=rgba(i%2?p.edge:p.mid,rnd(r,.12,.35));ctx.fill();ctx.restore();}
     runeRing(ctx,p,r,512,510,225);prism(ctx,512,520,180,410,p,r,.1);for(let i=0;i<20;i++){let a=rnd(r,0,7),d=rnd(r,220,510);polygon(ctx,512+Math.cos(a)*d,520+Math.sin(a)*d,rnd(r,6,23),3,a);ctx.fillStyle=rgba(p.shine,rnd(r,.1,.5));ctx.fill();}}
-  const MOTIFS={ocean,cosmos,ember,machine,relic,bloom,divine,shadow};
+  function storm(ctx,p,r){glow(ctx,512,480,420,p.edge,.78);for(let i=0;i<14;i++){let x=rnd(r,130,910),y=rnd(r,40,420),segments=[[x,y]],cx=x,cy=y;for(let j=0;j<4;j++){cx+=rnd(r,-90,90);cy+=rnd(r,60,150);segments.push([cx,cy]);}line(ctx,segments,p.shine,rnd(r,2,6),rnd(r,.18,.65));}
+    for(let i=0;i<11;i++){let y=150+i*60;line(ctx,[[0,y+rnd(r,-10,10)],[1024,y+rnd(r,-35,35)]],p.edge,rnd(r,.6,2.4),rnd(r,.08,.24));}
+    runeRing(ctx,p,r,512,535,210);polygon(ctx,512,515,145,8,Math.PI/8);ctx.strokeStyle=rgba(p.edge,.5);ctx.lineWidth=6;ctx.stroke();prism(ctx,512,520,135,315,p,r,.08);}
+  function frost(ctx,p,r){glow(ctx,512,500,390,p.shine,.72);for(let i=0;i<7;i++){let rad=120+i*34;for(let a=0;a<6;a++){let ang=a*Math.PI/3+rnd(r,-.04,.04),x=512+Math.cos(ang)*rad,y=510+Math.sin(ang)*rad;line(ctx,[[512,510],[x,y]],p.shine,2.5,.32);line(ctx,[[x,y],[x+Math.cos(ang+.55)*25,y+Math.sin(ang+.55)*25]],p.edge,2,.22);line(ctx,[[x,y],[x+Math.cos(ang-.55)*25,y+Math.sin(ang-.55)*25]],p.edge,2,.22);}}
+    for(let i=0;i<26;i++){polygon(ctx,rnd(r,70,950),rnd(r,80,930),rnd(r,7,20),6,Math.PI/6);ctx.strokeStyle=rgba(p.shine,rnd(r,.12,.4));ctx.lineWidth=1.5;ctx.stroke();}prism(ctx,512,510,145,350,p,r);}
+  function desert(ctx,p,r){glow(ctx,540,460,360,p.edge,.58);for(let i=0;i<8;i++){ctx.beginPath();let y=690+i*34;ctx.moveTo(-20,y);for(let x=0;x<=1040;x+=80){ctx.quadraticCurveTo(x+35,y-rnd(r,0,35),x+80,y+rnd(r,-10,20));}ctx.strokeStyle=rgba(i%2?p.edge:p.shine,.12+i*.015);ctx.lineWidth=22-i*1.8;ctx.stroke();}
+    for(let i=0;i<5;i++){let x=160+i*170;ctx.fillStyle=rgba(p.dark,.3);ctx.beginPath();ctx.moveTo(x,760);ctx.lineTo(x+120,340+rnd(r,-40,80));ctx.lineTo(x+240,760);ctx.fill();}
+    strokeRing(ctx,512,420,115,p.shine,.4,5);prism(ctx,512,505,150,380,p,r);}
+  function venom(ctx,p,r){glow(ctx,512,510,400,p.edge,.62);for(let i=0;i<15;i++){let x=rnd(r,120,900),y=rnd(r,120,820),rr=rnd(r,14,42);pathCircle(ctx,x,y,rr);ctx.fillStyle=rgba(i%3?p.edge:p.shine,rnd(r,.06,.17));ctx.fill();for(let j=0;j<3;j++)pathCircle(ctx,x+rnd(r,-50,50),y+rnd(r,-50,50),rr*rnd(r,.15,.4)),ctx.fill();}
+    for(let i=0;i<6;i++){ctx.beginPath();let x=120+i*155;ctx.moveTo(x,120);ctx.bezierCurveTo(x+70,280,x-30,500,x+90,820);ctx.strokeStyle=rgba(p.edge,.25+i*.02);ctx.lineWidth=9-i;ctx.stroke();}
+    runeRing(ctx,p,r,512,520,195);polygon(ctx,512,510,165,5,Math.PI/10);ctx.strokeStyle=rgba(p.shine,.4);ctx.lineWidth=5;ctx.stroke();prism(ctx,512,520,128,290,p,r,.12);}
+  const MOTIFS={ocean,cosmos,ember,machine,relic,bloom,divine,shadow,storm,frost,desert,venom};
   // 단순 벡터 실루엣: 별도의 생성형 AI·외부 이미지 없이 종족을 구분한다.
   function inferSubject(card,theme){
     if(Number(card.type)&6)return 'none';
     const race=Number(card.race)||0;
-    if(race&0x2000)return 'dragon';if(race&0x20||race&0x1000000)return 'mech';if(race&0x1)return 'warrior';if(race&0x4||race&0x200)return 'wings';if(race&0x8||race&0x10)return 'spirit';
-    return ({ember:'dragon',machine:'mech',divine:'wings',shadow:'spirit',relic:'warrior',ocean:'spirit',cosmos:'crystal',bloom:'wings'})[theme]||'crystal';
+    const name=String(card.name||'').toLocaleLowerCase();
+    const has=(...words)=>words.some(w=>name.includes(w));
+    if(has('용','dragon','drake','룡'))return 'dragon';
+    if(has('기사','검','sword','blade','나이트','knight'))return 'blade';
+    if(has('기계','메카','코어','machine','mech','robot','gear','bot'))return 'mech';
+    if(has('천사','성령','날개','angel','wing','holy'))return 'wings';
+    if(has('정령','망령','유령','spirit','ghost','phantom','soul'))return 'spirit';
+    if(has('수정','결정','crystal','gem','보석'))return 'crystal';
+    if(has('수인','야수','beast','wolf','tiger','사자','fox'))return 'beast';
+    if(has('눈','안','봉인','감시','eye','watch','seer'))return 'eye';
+    if(has('촉수','심연','해파리','tentacle','kraken','octo'))return 'tentacle';
+    if(race&0x2000)return 'dragon'; if(race&0x20||race&0x1000000)return 'mech'; if(race&0x1)return 'warrior'; if(race&0x4||race&0x200)return 'wings'; if(race&0x8||race&0x10)return 'spirit'; if(race&0x40||race&0x80)return 'beast';
+    return ({ember:'dragon',machine:'mech',divine:'wings',shadow:'spirit',relic:'warrior',ocean:'tentacle',cosmos:'crystal',bloom:'beast',storm:'blade',frost:'crystal',desert:'eye',venom:'tentacle'})[theme]||'crystal';
   }
   function drawSubject(ctx,p,r,subject){if(subject==='none')return;
     ctx.save();ctx.translate(512+rnd(r,-35,35),540+rnd(r,-20,20));ctx.rotate(rnd(r,-.055,.055));ctx.scale(rnd(r,.91,1.08),rnd(r,.91,1.08));
@@ -120,6 +179,23 @@
     }else if(subject==='crystal'){
       path([[0,-315],[154,-180],[190,102],[0,290],[-190,102],[-154,-180]]);line(ctx,[[0,-315],[0,290]],p.shine,7,.7);line(ctx,[[-154,-180],[0,16],[154,-180]],p.shine,6,.42);
       for(let side of [-1,1]){ctx.save();ctx.translate(side*235,95);ctx.rotate(side*.35);path([[0,-152],[65,-65],[59,100],[0,149],[-58,100],[-65,-65]]);ctx.restore();}
+    }else if(subject==='beast'){
+      path([[-240,175],[-150,40],[-170,-115],[-88,-194],[-12,-170],[12,-170],[88,-194],[170,-115],[150,40],[240,175],[120,238],[0,210],[-120,238]]);
+      path([[-74,-18],[-115,-226],[-38,-287],[0,-248],[38,-287],[115,-226],[74,-18],[0,33]]);
+      ctx.fillStyle=rgba(p.shine,.9);pathCircle(ctx,-54,-120,11);ctx.fill();pathCircle(ctx,54,-120,11);ctx.fill();
+    }else if(subject==='blade'){
+      path([[-24,300],[-54,16],[-20,-305],[0,-336],[20,-305],[54,16],[24,300],[0,262]]);
+      path([[-168,39],[-23,16],[0,-53],[23,16],[168,39],[112,82],[40,72],[-40,72],[-112,82]]);
+      for(let side of [-1,1]){ctx.save();ctx.translate(side*180,10);ctx.rotate(side*.72);path([[-16,136],[-30,-12],[-12,-178],[0,-203],[12,-178],[30,-12],[16,136],[0,114]]);ctx.restore();}
+      strokeRing(ctx,0,-214,40,p.shine,.6,6);
+    }else if(subject==='eye'){
+      ctx.beginPath();ctx.ellipse(0,0,280,160,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+      ctx.fillStyle=rgba(p.shine,.25);ctx.beginPath();ctx.ellipse(0,0,200,95,0,0,Math.PI*2);ctx.fill();
+      pathCircle(ctx,0,0,86);ctx.fillStyle=rgba(p.edge,.88);ctx.fill();strokeRing(ctx,0,0,120,p.shine,.8,6);pathCircle(ctx,0,0,25);ctx.fillStyle=rgba(p.dark,.95);ctx.fill();
+      for(let i=0;i<18;i++){let a=i*Math.PI/9;line(ctx,[[Math.cos(a)*130,Math.sin(a)*130],[Math.cos(a)*245,Math.sin(a)*245]],p.shine,3,.26);}
+    }else if(subject==='tentacle'){
+      for(let side of [-1,1]){for(let i=0;i<4;i++){ctx.save();ctx.scale(side,1);ctx.rotate((i-1.5)*.22);ctx.beginPath();ctx.moveTo(0,160);ctx.bezierCurveTo(40,40,140,-20,155,-180);ctx.bezierCurveTo(158,-230,134,-282,97,-315);ctx.strokeStyle=rgba(p.shine,.55-i*.06);ctx.lineWidth=18-i*2.4;ctx.stroke();for(let j=0;j<7;j++){pathCircle(ctx,95+rnd(r,-9,9),118-j*52,7-j*.7);ctx.fillStyle=rgba(p.edge,.4);ctx.fill();}ctx.restore();}}
+      path([[-94,205],[-125,80],[-94,-55],[-42,-152],[0,-187],[42,-152],[94,-55],[125,80],[94,205],[0,148]]);strokeRing(ctx,0,-212,48,p.shine,.6,6);
     }
     ctx.restore();
   }
@@ -127,20 +203,20 @@
   function drawArtwork(canvas,card,size,opts={}){
     canvas.width=canvas.height=size;
     const ctx=canvas.getContext('2d',{alpha:false});if(!ctx)throw new Error('브라우저 Canvas를 사용할 수 없습니다.');
-    const p=palette(card),r=rngFrom(card.id+'|'+card.name+'|'+p.theme+'|'+opts.seed+'|'+(card.variant||0)+'|'+$('tone-select').value+'|'+opts.subject);
+    const p=palette(card),subject=resolveSubject(card,p.theme);
+    const r=rngFrom(card.id+'|'+card.name+'|'+p.theme+'|'+opts.seed+'|'+(card.variant||0)+'|'+resolveTone(card)+'|'+subject);
     ctx.save();ctx.scale(size/1024,size/1024);
     gradientBackground(ctx,p,r);starsAndDust(ctx,p,r);
     ctx.save();ctx.shadowBlur=20;ctx.shadowColor=rgba(p.edge,.6);MOTIFS[p.theme](ctx,p,r);ctx.restore();
-    const subject=opts.subject==='auto'?inferSubject(card,p.theme):opts.subject;
     drawSubject(ctx,p,r,subject);
     overlayNoise(ctx,r);
     const vignette=ctx.createRadialGradient(512,485,230,512,485,750);vignette.addColorStop(0,'rgba(0,0,0,0)');vignette.addColorStop(.78,'rgba(0,0,0,.15)');vignette.addColorStop(1,'rgba(0,0,0,.67)');ctx.fillStyle=vignette;ctx.fillRect(0,0,1024,1024);
     if(opts.labels){const strip=ctx.createLinearGradient(0,700,0,1024);strip.addColorStop(0,'rgba(2,6,15,0)');strip.addColorStop(1,'rgba(2,6,15,.86)');ctx.fillStyle=strip;ctx.fillRect(0,700,1024,324);ctx.textAlign='center';ctx.fillStyle='#ffffff';ctx.font='700 44px "Noto Sans KR",system-ui,sans-serif';let name=card.name;while(ctx.measureText(name).width>870&&name.length>2)name=name.slice(0,-2)+'…';ctx.fillText(name,512,911);ctx.font='500 25px system-ui,sans-serif';ctx.fillStyle='#c6d5e9';ctx.fillText(card.id,512,963);}
     ctx.restore();
   }
-  function renderPreview(){const card=getCard(),canvas=$('art-canvas');$('download-current').disabled=state.busy||!card;$('card-style').disabled=state.busy||!card;$('reroll-card').disabled=state.busy||!card;if(!card){let c=canvas.getContext('2d');c.clearRect(0,0,canvas.width,canvas.height);$('preview-title').textContent='카드를 추가해 주세요';$('preview-meta').textContent='이미지 미리보기';return;}
+  function renderPreview(){const card=getCard(),canvas=$('art-canvas');$('download-current').disabled=state.busy||!card;$('card-style').disabled=state.busy||!card;$('card-subject').disabled=state.busy||!card;$('card-tone').disabled=state.busy||!card;$('reroll-card').disabled=state.busy||!card;if(!card){let c=canvas.getContext('2d');c.clearRect(0,0,canvas.width,canvas.height);$('preview-title').textContent='카드를 추가해 주세요';$('preview-meta').textContent='이미지 미리보기';return;}
     try{drawArtwork(canvas,card,640,{seed:state.seed,labels:$('label-toggle').checked,subject:$('subject-select').value});}catch(e){notify('미리보기 생성 실패: '+e.message,'error');}
-    $('preview-title').textContent=card.name;$('preview-meta').textContent=card.id+' · '+THEMES[resolveTheme(card)].name;$('card-style').value=card.overrideStyle||'auto';
+    $('preview-title').textContent=card.name;$('preview-meta').textContent=card.id+' · '+THEMES[resolveTheme(card)].name;$('card-style').value=card.overrideStyle||'auto';$('card-subject').value=card.overrideSubject??'inherit';$('card-tone').value=card.overrideTone??'inherit';
     $('stage-resolution').textContent=$('size-select').value+' × '+$('size-select').value;
   }
   function listCards(){const list=$('card-list');list.textContent='';const frag=document.createDocumentFragment(),items=visibleCards();
@@ -154,12 +230,30 @@
     list.append(frag);$('card-count').textContent=state.cards.length+'장'+(state.demo?' · 예시 데이터':'');updateSelectionUI();
   }
   function refresh(){listCards();renderPreview();}
-  function normalizeCard(raw){const id=String(raw.id??'').trim();if(!/^\d{1,18}$/.test(id)||id==='0')return null;const name=String(raw.name||'카드 '+id).trim().slice(0,100)||'카드 '+id;const style=STYLES.includes(raw.style)?raw.style:null;return {id,name,style,attribute:Number(raw.attribute)||0,type:Number(raw.type)||0,race:Number(raw.race)||0,variant:Number.isSafeInteger(raw.variant)&&raw.variant>=0?Math.min(raw.variant,1000000):0,overrideStyle:STYLES.includes(raw.overrideStyle)?raw.overrideStyle:null};}
+  function normalizeCard(raw){const id=String(raw.id??'').trim();if(!/^\d{1,18}$/.test(id)||id==='0')return null;const name=String(raw.name||'카드 '+id).trim().slice(0,100)||'카드 '+id;const style=STYLES.includes(raw.style)?raw.style:null;
+    const overrideTone=raw.overrideTone==='original'||TONES[raw.overrideTone]?raw.overrideTone:null;
+    return {id,name,style,attribute:Number(raw.attribute)||0,type:Number(raw.type)||0,race:Number(raw.race)||0,variant:Number.isSafeInteger(raw.variant)&&raw.variant>=0?Math.min(raw.variant,1000000):0,overrideStyle:STYLES.includes(raw.overrideStyle)?raw.overrideStyle:null,overrideSubject:SUBJECTS.includes(raw.overrideSubject)?raw.overrideSubject:null,overrideTone};}
+  function applyToChecked(changes,label){
+    if(state.busy)return;
+    const cards=selectedCards();if(!cards.length){notify('먼저 오른쪽 목록에서 적용할 카드를 체크해 주세요.','error');return;}
+    const updates={};
+    if(Object.prototype.hasOwnProperty.call(changes,'style'))updates.overrideStyle=STYLES.includes(changes.style)?changes.style:null;
+    if(Object.prototype.hasOwnProperty.call(changes,'subject'))updates.overrideSubject=SUBJECTS.includes(changes.subject)?changes.subject:null;
+    if(Object.prototype.hasOwnProperty.call(changes,'tone'))updates.overrideTone=changes.tone==='original'||TONES[changes.tone]?changes.tone:null;
+    if(!Object.keys(updates).length){notify('변경할 배경·모티브·색상을 하나 이상 선택해 주세요.');return;}
+    const snapshot=[];
+    for(const card of cards){const original={};let changed=false;for(const [key,value] of Object.entries(updates)){original[key]=card[key]??null;if((card[key]??null)!==value){card[key]=value;changed=true;}}if(changed)snapshot.push({id:card.id,original});}
+    if(!snapshot.length){notify('선택 카드에 이미 같은 설정이 적용되어 있어요.');return;}
+    state.lastBatch=snapshot;state.demo=false;saveState();refresh();notify(`${label}: ${snapshot.length}장의 설정을 변경했습니다.`,'success');
+  }
+  function applyPreset(){const selected=$('preset-select').value,preset=PRESETS[selected];if(!preset){notify('카드군 프리셋을 선택해 주세요.');return;}applyToChecked(preset,preset.name+' 프리셋');}
+  function applyBatch(){const changes={};for(const [property,id] of [['style','batch-style'],['subject','batch-subject'],['tone','batch-tone']]){const value=$(id).value;if(value!=='keep')changes[property]=value;}applyToChecked(changes,'선택 카드 일괄 적용');}
+  function undoBatch(){if(state.busy||!state.lastBatch)return;let restored=0;const byId=new Map(state.cards.map(c=>[c.id,c]));for(const row of state.lastBatch){const card=byId.get(row.id);if(card){Object.assign(card,row.original);restored++;}}state.lastBatch=null;saveState();refresh();notify(`${restored}장의 직전 일괄 설정을 되돌렸습니다.`,'success');}
   function importCards(incoming,replace=false){const valid=incoming.map(normalizeCard).filter(Boolean),invalid=incoming.length-valid.length;
     if(!valid.length){notify('유효한 카드 ID가 없습니다. 숫자로 된 ID를 입력해 주세요.','error');return;}
     const old=replace||state.demo?[]:state.cards;const seen=new Set(old.map(c=>c.id));let duplicates=0,added=0;const next=old.slice();for(const c of valid){if(seen.has(c.id)){duplicates++;continue;}if(next.length>=MAX_CARDS)break;next.push(c);seen.add(c.id);added++;}
     const capped=(old.length+valid.length-duplicates)>MAX_CARDS;
-    state.cards=next;state.demo=false;$('card-search').value='';if(replace||!old.length){state.checked=new Set(next.map(c=>c.id));}else for(const c of next.slice(old.length))state.checked.add(c.id);if(added||!state.cards.find(c=>c.id===state.selected))state.selected=added?next[old.length].id:(next[0]?.id||null);saveState();refresh();notify(`${added}장 추가${duplicates?' · 중복 '+duplicates+'장 제외':''}${invalid?' · 잘못된 ID '+invalid+'개 제외':''}${capped?' · 최대 400장 제한':''}`,added?'success':'info');
+    state.cards=next;state.demo=false;state.lastBatch=null;$('card-search').value='';if(replace||!old.length){state.checked=new Set(next.map(c=>c.id));}else for(const c of next.slice(old.length))state.checked.add(c.id);if(added||!state.cards.find(c=>c.id===state.selected))state.selected=added?next[old.length].id:(next[0]?.id||null);saveState();refresh();notify(`${added}장 추가${duplicates?' · 중복 '+duplicates+'장 제외':''}${invalid?' · 잘못된 ID '+invalid+'개 제외':''}${capped?' · 최대 400장 제한':''}`,added?'success':'info');
   }
   function splitLine(line){const delim=line.includes('\t')?'\t':line.includes('|')?'|':',';let columns=[],cur='',quoted=false;for(let i=0;i<line.length;i++){const ch=line[i];if(ch==='"'){if(quoted&&line[i+1]==='"'){cur+='"';i++;}else quoted=!quoted;}else if(ch===delim&&!quoted){columns.push(cur.trim());cur='';}else cur+=ch;}columns.push(cur.trim());return columns;}
   function parseList(text){const rows=text.replace(/^\uFEFF/,'').split(/\r?\n/).map(s=>s.trim()).filter(s=>s&&!s.startsWith('#'));if(!rows.length)return[];const items=[];for(let i=0;i<rows.length;i++){const [id,name,style]=splitLine(rows[i]);if(i===0&&/^(id|card.?id|카드.?id)$/i.test(id))continue;items.push({id,name,style:style?.toLowerCase()});}return items;}
@@ -184,21 +278,26 @@
   function saveBlob(blob,name){const a=document.createElement('a');const url=URL.createObjectURL(blob);a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);}
   function renderBlob(card,opts){return new Promise((resolve,reject)=>{try{const canvas=document.createElement('canvas');drawArtwork(canvas,card,opts.size,opts);canvas.toBlob(b=>b?resolve(b):reject(new Error('이미지 인코딩 실패')),opts.format==='png'?'image/png':'image/jpeg',.91);}catch(e){reject(e);}});}
   async function exportCurrent(){if(state.busy)return;const card=getCard();if(!card){notify('카드를 먼저 추가해 주세요.','error');return;}try{state.busy=true;toggleBusy();const opts=settings();const blob=await renderBlob(card,opts);saveBlob(blob,card.id+'.'+opts.format);notify('이미지를 저장했습니다: '+card.id+'.'+opts.format,'success');}catch(e){notify('저장 실패: '+e.message,'error');}finally{state.busy=false;toggleBusy();}}
-  function toggleBusy(){$('download-current').disabled=state.busy||!state.cards.length;updateSelectionUI();$('add-card').disabled=state.busy;$('import-text').disabled=state.busy;$('file-input').disabled=state.busy;$('clear-cards').disabled=state.busy;$('card-style').disabled=state.busy||!getCard();$('reroll-card').disabled=state.busy||!getCard();$('reroll').disabled=state.busy;for(const id of ['style-select','subject-select','tone-select','size-select','format-select','label-toggle'])$(id).disabled=state.busy;document.querySelectorAll('#card-list input,#card-list button').forEach(el=>el.disabled=state.busy);$('progress').hidden=!state.busy;}
+  function toggleBusy(){$('download-current').disabled=state.busy||!state.cards.length;updateSelectionUI();$('add-card').disabled=state.busy;$('import-text').disabled=state.busy;$('file-input').disabled=state.busy;$('clear-cards').disabled=state.busy;$('card-style').disabled=state.busy||!getCard();$('card-subject').disabled=state.busy||!getCard();$('card-tone').disabled=state.busy||!getCard();$('reroll-card').disabled=state.busy||!getCard();$('reroll').disabled=state.busy;for(const id of ['style-select','subject-select','tone-select','size-select','format-select','label-toggle','preset-select','batch-style','batch-subject','batch-tone'])$(id).disabled=state.busy;document.querySelectorAll('#card-list input,#card-list button').forEach(el=>el.disabled=state.busy);$('progress').hidden=!state.busy;}
   async function exportAll(){if(state.busy)return;if(!state.checked.size){notify('ZIP으로 저장할 카드를 선택해 주세요.','error');return;}
     state.busy=true;state.cancel=false;toggleBusy();const opts=settings(),cards=selectedCards(),entries=[];let totalBytes=0;if(!cards.length){state.busy=false;toggleBusy();notify('ZIP으로 저장할 카드를 선택해 주세요.','error');return;}try{for(let i=0;i<cards.length;i++){if(state.cancel){notify('ZIP 생성을 취소했습니다.');return;}const blob=await renderBlob(cards[i],opts);const data=new Uint8Array(await blob.arrayBuffer());totalBytes+=data.byteLength;if(totalBytes>350*1024*1024)throw new Error('ZIP 이미지 총 크기가 350MB를 초과했습니다. 일부 카드만 선택하거나 512 해상도를 사용해 주세요.');entries.push({name:cards[i].id+'.'+opts.format,data});$('progress-fill').style.width=((i+1)/cards.length*100).toFixed(1)+'%';$('progress-label').textContent=`일러스트 생성 중 · ${i+1} / ${cards.length}`;if(i%3===0)await new Promise(resolve=>requestAnimationFrame(resolve));}
       if(state.cancel){notify('ZIP 생성을 취소했습니다.');return;}$('progress-label').textContent='ZIP 파일로 묶는 중…';await new Promise(resolve=>requestAnimationFrame(resolve));const zip=makeZip(entries);const date=new Date().toLocaleDateString('sv-SE');saveBlob(zip,`임시일러스트_${date}_${cards.length}장.zip`);notify(`${cards.length}장의 임시 일러스트 ZIP 저장 완료`,'success');
     }catch(e){notify('일괄 생성 실패: '+e.message,'error');}finally{state.busy=false;state.cancel=false;$('progress-fill').style.width='0%';toggleBusy();}}
   function onAdd(){const id=$('card-id').value.trim(),name=$('card-name').value.trim();if(!/^\d{1,18}$/.test(id)||id==='0'){notify('카드 ID는 1~18자리의 숫자로 입력해 주세요.','error');$('card-id').focus();return;}importCards([{id,name}],false);$('card-id').value='';$('card-name').value='';}
-  function wire(){restoreState();for(const id of ['style-select','subject-select','tone-select','size-select','format-select','label-toggle'])$(id).addEventListener('change',()=>{saveState();refresh();});$('reroll').addEventListener('click',()=>{state.seed++;$('seed-number').textContent='#'+state.seed;saveState();refresh();notify('모든 이미지에 새로운 변형을 적용했습니다.');});$('add-card').addEventListener('click',onAdd);for(const id of ['card-id','card-name'])$(id).addEventListener('keydown',e=>{if(e.key==='Enter')onAdd();});$('import-text').addEventListener('click',()=>{const txt=$('bulk-text').value;if(!txt.trim()){notify('가져올 카드 목록을 붙여넣어 주세요.','error');return;}importCards(parseList(txt),false);$('bulk-text').value='';});$('file-input').addEventListener('change',e=>openFile(e.target.files[0]));const dz=$('dropzone');for(const event of ['dragenter','dragover'])dz.addEventListener(event,e=>{e.preventDefault();dz.classList.add('dragging');});for(const event of ['dragleave','drop'])dz.addEventListener(event,e=>{e.preventDefault();dz.classList.remove('dragging');});dz.addEventListener('drop',e=>{if(!state.busy)openFile(e.dataTransfer.files[0]);});dz.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('file-input').click();}});$('download-current').addEventListener('click',exportCurrent);$('download-zip').addEventListener('click',exportAll);$('cancel-export').addEventListener('click',()=>{state.cancel=true;$('progress-label').textContent='중단 처리 중…';});$('clear-cards').addEventListener('click',()=>{if(state.busy)return;state.cards=[];state.checked.clear();state.selected=null;state.demo=false;$('card-search').value='';saveState();refresh();notify('목록을 비웠습니다.');});
+  function wire(){restoreState();for(const id of ['style-select','subject-select','tone-select','size-select','format-select','label-toggle'])$(id).addEventListener('change',()=>{saveState();refresh();});$('reroll').addEventListener('click',()=>{state.seed++;$('seed-number').textContent='#'+state.seed;saveState();refresh();notify('모든 이미지에 새로운 변형을 적용했습니다.');});$('add-card').addEventListener('click',onAdd);for(const id of ['card-id','card-name'])$(id).addEventListener('keydown',e=>{if(e.key==='Enter')onAdd();});$('import-text').addEventListener('click',()=>{const txt=$('bulk-text').value;if(!txt.trim()){notify('가져올 카드 목록을 붙여넣어 주세요.','error');return;}importCards(parseList(txt),false);$('bulk-text').value='';});$('file-input').addEventListener('change',e=>openFile(e.target.files[0]));const dz=$('dropzone');for(const event of ['dragenter','dragover'])dz.addEventListener(event,e=>{e.preventDefault();dz.classList.add('dragging');});for(const event of ['dragleave','drop'])dz.addEventListener(event,e=>{e.preventDefault();dz.classList.remove('dragging');});dz.addEventListener('drop',e=>{if(!state.busy)openFile(e.dataTransfer.files[0]);});dz.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('file-input').click();}});$('download-current').addEventListener('click',exportCurrent);$('download-zip').addEventListener('click',exportAll);$('cancel-export').addEventListener('click',()=>{state.cancel=true;$('progress-label').textContent='중단 처리 중…';});$('clear-cards').addEventListener('click',()=>{if(state.busy)return;state.cards=[];state.checked.clear();state.selected=null;state.demo=false;state.lastBatch=null;$('card-search').value='';saveState();refresh();notify('목록을 비웠습니다.');});
     $('card-search').addEventListener('input',()=>listCards());
     $('select-all').addEventListener('click',()=>{if(state.busy)return;for(const card of visibleCards())state.checked.add(card.id);saveState();listCards();});
     $('select-none').addEventListener('click',()=>{if(state.busy)return;state.checked.clear();saveState();listCards();});
     $('delete-selected').addEventListener('click',()=>{if(!state.checked.size)return;removeCards([...state.checked]);});
+    $('apply-preset').addEventListener('click',applyPreset);
+    $('apply-batch').addEventListener('click',applyBatch);
+    $('undo-batch').addEventListener('click',undoBatch);
     $('card-style').addEventListener('change',()=>{const card=getCard();if(!card||state.busy)return;card.overrideStyle=STYLES.includes($('card-style').value)?$('card-style').value:null;saveState();refresh();});
+    $('card-subject').addEventListener('change',()=>{const card=getCard();if(!card||state.busy)return;card.overrideSubject=SUBJECTS.includes($('card-subject').value)?$('card-subject').value:null;saveState();refresh();});
+    $('card-tone').addEventListener('change',()=>{const card=getCard();if(!card||state.busy)return;const val=$('card-tone').value;card.overrideTone=val==='original'||TONES[val]?val:null;saveState();refresh();});
     $('reroll-card').addEventListener('click',()=>{const card=getCard();if(!card||state.busy)return;card.variant=(card.variant||0)+1;saveState();renderPreview();notify(card.name+'의 이미지 변형을 변경했습니다.','success');});
     refresh();}
   wire();
   // Exposed only for deterministic automated tests, not part of app's public API.
-  Object.defineProperty(window,'__YGO_TEST__',{value:{parseList,normalizeCard,makeZip,drawArtwork,importCards,inferSubject,crc32,selectedCards,getCards:()=>state.cards.slice(),getChecked:()=>[...state.checked]}});
+  Object.defineProperty(window,'__YGO_TEST__',{configurable:true,value:{parseList,normalizeCard,makeZip,drawArtwork,importCards,inferSubject,crc32,selectedCards,resolveTheme,resolveTone,resolveSubject,applyToChecked,undoBatch,PRESETS,getCards:()=>state.cards.slice(),getChecked:()=>[...state.checked]}});
 })();

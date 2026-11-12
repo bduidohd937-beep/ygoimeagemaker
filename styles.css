@@ -23,3 +23,29 @@
 .library-footer > .button{margin-bottom:12px}
 .library-note{display:block;line-height:1.65}
 @media(max-width:760px){.card-tuning{padding:0 15px 12px}}
+
+/* V1.3 — 안전한 체크 기반 일괄 적용 + 프리셋 + 개별 모티브/색상 */
+.batch-heading{margin-top:25px;margin-bottom:15px;padding-top:16px;border-top:1px solid #303b50}
+.batch-panel{border:1px solid #35435d;background:linear-gradient(165deg,#1a263b,#111c2d);border-radius:12px;padding:13px;margin-bottom:7px}
+.batch-panel .field-group{margin-bottom:10px}
+.batch-panel .button{margin-bottom:8px;white-space:normal;line-height:1.4}
+.batch-panel .button-primary{background:linear-gradient(120deg,#8ca9f8,#bbcaff);color:#0a1833}
+.batch-divider{text-align:center;font-size:10px;color:#9ba9c5;border-top:1px solid #3a475f;padding-top:11px;margin:8px 0 12px}
+.batch-note{margin:4px 0 0;color:#99b2da;font-size:10px;line-height:1.6;text-align:center}
+.card-tuning-extra{padding-top:0}
+.card-tuning-extra label{white-space:nowrap}
+.card-tuning-extra select{min-width:90px}
+@media(max-width:760px){.batch-heading{margin-top:19px}.card-tuning-extra{gap:6px}.card-tuning-extra select{flex:1}}
+
+/* V1.3 — 안전한 체크 기반 일괄 적용 + 프리셋 + 개별 모티브/색상 */
+.batch-heading{margin-top:25px;margin-bottom:15px;padding-top:16px;border-top:1px solid #303b50}
+.batch-panel{border:1px solid #35435d;background:linear-gradient(165deg,#1a263b,#111c2d);border-radius:12px;padding:13px;margin-bottom:7px}
+.batch-panel .field-group{margin-bottom:10px}
+.batch-panel .button{margin-bottom:8px;white-space:normal;line-height:1.4}
+.batch-panel .button-primary{background:linear-gradient(120deg,#8ca9f8,#bbcaff);color:#0a1833}
+.batch-divider{text-align:center;font-size:10px;color:#9ba9c5;border-top:1px solid #3a475f;padding-top:11px;margin:8px 0 12px}
+.batch-note{margin:4px 0 0;color:#99b2da;font-size:10px;line-height:1.6;text-align:center}
+.card-tuning-extra{padding-top:0}
+.card-tuning-extra label{white-space:nowrap}
+.card-tuning-extra select{min-width:90px}
+@media(max-width:760px){.batch-heading{margin-top:19px}.card-tuning-extra{gap:6px}.card-tuning-extra select{flex:1}}
