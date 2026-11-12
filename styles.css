@@ -49,3 +49,9 @@
 .card-tuning-extra label{white-space:nowrap}
 .card-tuning-extra select{min-width:90px}
 @media(max-width:760px){.batch-heading{margin-top:19px}.card-tuning-extra{gap:6px}.card-tuning-extra select{flex:1}}
+
+/* V1.3.1 — 긴 설정 패널 때문에 미리보기 중앙이 세로로 비는 현상 방지 */
+.workspace{align-items:start}
+.preview{align-self:start}
+.art-stage{flex:0 0 auto;min-height:500px}
+@media(max-width:760px){.art-stage{min-height:0}}
