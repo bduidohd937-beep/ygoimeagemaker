@@ -7,8 +7,10 @@
   <meta name="description" content="유희왕 커스텀 카드 테스트를 위한 임시 일러스트 생성기. CDB를 불러오거나 카드 ID를 입력해 이미지와 ZIP을 만드세요." />
   <title>YGO ART LAB — 임시 일러스트 생성기</title>
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="prompt-lab.css" />
   <script src="asset-engine.js" defer></script>
   <script src="app.js" defer></script>
+  <script src="prompt-lab.js" defer></script>
 </head>
 <body>
   <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -19,7 +21,7 @@
         <span class="brand-mark" aria-hidden="true"><span class="mark-star">✦</span></span>
         <span><strong>YGO <em>ART</em> LAB</strong><small>커스텀 카드 테스트 도구</small></span>
       </a>
-      <div class="top-actions"><span class="privacy"><span class="privacy-dot"></span>브라우저 내부에서 이미지 생성</span><span class="version">V1.4</span></div>
+      <div class="top-actions"><span class="privacy"><span class="privacy-dot"></span>브라우저 내부에서 이미지 생성</span><a class="prompt-lab-toplink" href="#prompt-lab">화풍 연구실 · 24종</a><span class="version">V1.5</span></div>
     </header>
 
     <main id="main">
@@ -107,6 +109,49 @@
           <div class="card-list" id="card-list" role="list" aria-label="생성 대상 카드 목록"></div>
           <div class="library-footer"><button class="button button-outline full" id="delete-selected" type="button">선택 카드 목록에서 삭제</button><span class="library-note">파일명 <code>카드ID.jpg</code> · 목록과 생성 설정은 이 브라우저에 저장됨</span><div class="library-summary"><span id="selection-summary">선택 3 / 전체 3장</span><strong id="total-count">3 <small>장</small></strong></div></div>
         </aside>
+      </section>
+      
+      <section class="prompt-lab" id="prompt-lab" aria-label="24종 유희왕 화풍 프롬프트 연구실">
+        <div class="prompt-lab-header">
+          <div><span class="prompt-lab-tag">ART DIRECTION / PROMPT LAB V1.0</span><h2>화풍 연구실 <span>24 STYLE ENGINE</span></h2>
+            <p>선택 카드의 정보를 불러오고 24종 화풍의 선화·채색·질감·구도를 조합해 이미지 생성용 프롬프트를 만들 수 있습니다. 설정과 프롬프트는 내 브라우저에서 처리됩니다.</p></div>
+          <span class="prompt-lab-count">화풍 24종</span>
+        </div>
+        <div class="prompt-lab-grid">
+          <div class="prompt-lab-controls">
+            <div class="prompt-card-row"><span>현재 카드: <strong id="prompt-current-card">불러오는 중…</strong></span><button type="button" class="prompt-btn" id="prompt-use-card">↻ 카드 정보 가져오기</button></div>
+            <div class="prompt-field-row">
+              <div><label class="prompt-label" for="prompt-primary">주화풍</label><select id="prompt-primary"></select></div>
+              <div><label class="prompt-label" for="prompt-secondary">보조화풍 (선택)</label><select id="prompt-secondary"><option value="none">혼합하지 않음</option></select></div>
+            </div>
+            <div class="prompt-field-row">
+              <div><label class="prompt-label" for="prompt-kind">피사체</label><select id="prompt-kind"><option value="monster">몬스터·드래곤</option><option value="human">성인 인간·미소녀·전사</option><option value="mecha">기계·메카</option><option value="scene">세계관·서사 장면</option><option value="magic">마법·함정 연출</option></select></div>
+              <div><label class="prompt-label" for="prompt-layout">원화 화면</label><select id="prompt-layout"><option value="square">1:1 정사각형</option><option value="portrait">3:4 세로형</option><option value="overframe">오버프레임용 확장 원화</option></select></div>
+            </div>
+            <div class="prompt-field"><label class="prompt-label" for="prompt-subject">대상 설명</label><textarea id="prompt-subject" rows="4" maxlength="4000" placeholder="예: 푸른 수정 코어를 가진 은빛 갑주 용. 왼쪽 뿔이 부러지고…"></textarea></div>
+            <div class="prompt-field"><label class="prompt-label" for="prompt-lock">반드시 유지할 디자인</label><textarea id="prompt-lock" rows="3" maxlength="4000" placeholder="예: 긴 은발, 금빛 눈, 왼손의 검, 날개 한 쌍, 십자가 펜던트"></textarea></div>
+            <div class="prompt-field-row">
+              <div><label class="prompt-label" for="prompt-light">광원 연출</label><select id="prompt-light"><option value="auto">화풍에 맞춰 자동</option><option value="dramatic">극적인 역광</option><option value="soft">부드러운 확산광</option><option value="dark">어두운 국소광</option></select></div>
+              <div><label class="prompt-label" for="prompt-background">배경 설정</label><input id="prompt-background" type="text" maxlength="2000" placeholder="예: 안개 낀 성역, 심해, 황혼의 무대" /></div>
+            </div>
+            <div class="prompt-field"><label class="prompt-label" for="prompt-extra">추가 연출 · 요청 사항</label><textarea id="prompt-extra" rows="3" maxlength="4000" placeholder="예: 화면 아래에서 올려다보는 초광각, 무기 위주 구도"></textarea></div>
+            <p class="prompt-note">입력 설정은 별도 저장 키로 보관되며 기존 카드 목록·이미지·CDB 데이터는 변경하지 않습니다.</p>
+          </div>
+          <div class="prompt-lab-result">
+            <div class="prompt-result-top"><h3>실시간 완성 프롬프트</h3><button id="prompt-copy" type="button" class="prompt-btn prompt-btn-primary">⧉ 프롬프트 복사</button></div>
+            <p id="prompt-style-summary">화풍 정보를 불러오는 중…</p>
+            <label class="prompt-label" for="prompt-output">생성용 프롬프트 · 직접 편집이 아닌 설정 기반 자동 생성</label>
+            <textarea id="prompt-output" readonly spellcheck="false" rows="20"></textarea>
+            <div class="prompt-actions">
+              <button type="button" id="prompt-download" class="prompt-btn">↓ TXT 저장</button>
+              <button type="button" id="prompt-export" class="prompt-btn">↓ 설정 JSON 저장</button>
+              <label class="prompt-btn prompt-lab-import">↑ 설정 가져오기<input id="prompt-import" type="file" accept=".json,application/json" aria-label="프롬프트 설정 JSON 가져오기"></label>
+            </div>
+            <div class="prompt-actions"><button id="prompt-apply-preview" type="button" class="prompt-btn prompt-btn-primary">✦ 기존 임시 이미지에 유사 분위기 적용</button></div>
+            <div class="prompt-disclaimer"><strong>기존 이미지 생성과의 연동 안내</strong> — 위 버튼은 선택 화풍을 12종 배경·SVG 모티브로 근사 반영합니다. 이 사이트는 AI 원화 생성 모델을 실행하지 않으므로, 화풍 프롬프트 그대로 완성 원화를 그리는 기능은 아닙니다. AI 생성 도구에는 복사한 프롬프트를 사용하세요.</div>
+            <p id="prompt-message" role="status" aria-live="polite"></p>
+          </div>
+        </div>
       </section>
       <footer class="footer"><span>YGO ART LAB · 테스트용 임시 일러스트 생성기</span><span>CDB를 서버에 업로드하지 않습니다 · <a href="assets/오픈에셋_출처와_라이선스.md" target="_blank" rel="noopener noreferrer">SVG 출처와 라이선스 · Lorc / Delapouite (CC BY 3.0)</a></span></footer>
     </main>
