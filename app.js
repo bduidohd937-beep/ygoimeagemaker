@@ -217,7 +217,7 @@
     if(opts.labels){const strip=ctx.createLinearGradient(0,700,0,1024);strip.addColorStop(0,'rgba(2,6,15,0)');strip.addColorStop(1,'rgba(2,6,15,.86)');ctx.fillStyle=strip;ctx.fillRect(0,700,1024,324);ctx.textAlign='center';ctx.fillStyle='#ffffff';ctx.font='700 44px "Noto Sans KR",system-ui,sans-serif';let name=card.name;while(ctx.measureText(name).width>870&&name.length>2)name=name.slice(0,-2)+'…';ctx.fillText(name,512,911);ctx.font='500 25px system-ui,sans-serif';ctx.fillStyle='#c6d5e9';ctx.fillText(card.id,512,963);}
     ctx.restore();
   }
-  function renderPreview(){const ticket=++previewTicket;const card=getCard(),canvas=$('art-canvas');$('download-current').disabled=state.busy||!card;$('card-style').disabled=state.busy||!card;$('card-subject').disabled=state.busy||!card;$('card-tone').disabled=state.busy||!card;$('reroll-card').disabled=state.busy||!card;if(!card){let c=canvas.getContext('2d');c.clearRect(0,0,canvas.width,canvas.height);$('preview-title').textContent='카드를 추가해 주세요';$('preview-meta').textContent='이미지 미리보기';return;}
+  function renderPreview(){const ticket=++previewTicket;const card=getCard(),canvas=$('art-canvas');window.dispatchEvent(new CustomEvent('ygo:card-change',{detail:card?{id:card.id,name:card.name,style:resolveTheme(card)}:null}));$('download-current').disabled=state.busy||!card;$('card-style').disabled=state.busy||!card;$('card-subject').disabled=state.busy||!card;$('card-tone').disabled=state.busy||!card;$('reroll-card').disabled=state.busy||!card;if(!card){let c=canvas.getContext('2d');c.clearRect(0,0,canvas.width,canvas.height);$('preview-title').textContent='카드를 추가해 주세요';$('preview-meta').textContent='이미지 미리보기';return;}
     try{const opts=settings();drawArtwork(canvas,card,640,opts);const subject=resolveSubject(card,resolveTheme(card)),path=opts.artMode==='asset'&&Asset?Asset.pick(card,subject,opts.seed):null;
       $('asset-status').textContent=path?'오픈 SVG · Game-icons':'기존 절차 벡터';
       if(path)Asset.prepare(path).then(img=>{if(ticket===previewTicket&&img&&!state.busy)drawArtwork(canvas,card,640,opts);else if(ticket===previewTicket&&!img)$('asset-status').textContent='에셋 로드 실패 · 벡터 대체';});}catch(e){notify('미리보기 생성 실패: '+e.message,'error');}
@@ -302,6 +302,19 @@
     $('card-tone').addEventListener('change',()=>{const card=getCard();if(!card||state.busy)return;const val=$('card-tone').value;card.overrideTone=val==='original'||TONES[val]?val:null;saveState();refresh();});
     $('reroll-card').addEventListener('click',()=>{const card=getCard();if(!card||state.busy)return;card.variant=(card.variant||0)+1;saveState();renderPreview();notify(card.name+'의 이미지 변형을 변경했습니다.','success');});
     refresh();}
+  // Read-only card bridge plus explicit, user-initiated procedural preview settings.
+  // Prompt text never reaches Canvas rendering: Canvas/SVG cannot interpret AI prompts.
+  window.YGOArtLabBridge=Object.freeze({
+    getCurrentCard(){const c=getCard();return c?{id:c.id,name:c.name,style:resolveTheme(c)}:null;},
+    applyPreviewSettings(config){
+      if(state.busy||!getCard()||!config||typeof config!=='object')return false;
+      const c=getCard();
+      if(STYLES.includes(config.theme))c.overrideStyle=config.theme;
+      if(SUBJECTS.includes(config.subject))c.overrideSubject=config.subject;
+      saveState();refresh();
+      return true;
+    }
+  });
   wire();
   // Exposed only for deterministic automated tests, not part of app's public API.
   Object.defineProperty(window,'__YGO_TEST__',{configurable:true,value:{parseList,normalizeCard,makeZip,drawArtwork,importCards,Asset,inferSubject,crc32,selectedCards,resolveTheme,resolveTone,resolveSubject,applyToChecked,undoBatch,PRESETS,getCards:()=>state.cards.slice(),getChecked:()=>[...state.checked]}});
